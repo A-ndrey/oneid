@@ -1,0 +1,143 @@
+{{ define "index" }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ . }}</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"
+            integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC"
+            crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" integrity="sha512-ZDSPMa/JM1D+7kdg2x3BsruQ6T/JpJo3jWDWkCZsP+5yVyp1KfESqLI+7RqB5k24F7p2cV7i2YHh/890y6P6Sw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kode+Mono:wght@400..700&display=swap');
+
+        html {
+            height: 100%;
+            font-family: "Kode Mono", monospace;
+        }
+        body {
+            height: inherit;
+            margin: 0;
+        }
+        #main, .content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            height: inherit;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        form input {
+            margin: 10px 0;
+        }
+        h1 {
+            font-size: 52pt;
+            flex-basis: 20%;
+        }
+        .action {
+            font-size: 32pt;
+        }
+        .paragraph {
+            font-size: 24pt;
+        }
+        input, button {
+            border: solid black 2px;
+            padding: 4px;
+            font-size: 14pt;
+            font-family: inherit;
+        }
+        input:focus, button:focus {
+            outline: solid black 1px !important;
+        }
+        .btn {
+            background-color: black;
+            color: white;
+            font-size: 14pt;
+            font-family: inherit;
+        }
+        .small {
+            font-size: 12pt;
+        }
+        a {
+            color: black;
+            text-decoration: underline;
+        }
+        .horizontal-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .shared-secret {
+            font-size: 14pt;
+            letter-spacing: .2rem;
+        }
+    </style>
+</head>
+<body>
+<div id="main">
+    <h1>OneID</h1>
+    <div hx-get="/profile" hx-trigger="load" class="content"></div>
+</div>
+</body>
+</html>
+{{ end }}
+
+{{ define "login" }}
+<p class="action">Login</p>
+<form hx-post="/login" hx-trigger="submit" hx-target=".content">
+    <input type="email" name="email" placeholder="email" {{ if . }}value="{{.}}"{{ end }}>
+    <input type="password" name="password" placeholder="password" autocomplete="current-password">
+    <input type="submit" value="Submit" class="btn">
+    <p>Don't have an account? <a hx-get="/signup" hx-target=".content">Register now</a></p>
+</form>
+{{ end }}
+
+{{ define "signup" }}
+<p class="action">Sign up</p>
+<form hx-post="/signup" hx-trigger="submit" hx-target=".content">
+    <input type="email" name="email" placeholder="email">
+    <input type="password" name="password" placeholder="password" autocomplete="new-password">
+    <input type="password" placeholder="password confirmation">
+    <input type="submit" value="Submit" class="btn">
+    <p>Already have an account? <a hx-get="/login" hx-target=".content">Login now</a></p>
+</form>
+{{ end }}
+
+{{ define "profile" }}
+<p class="action">Profile</p>
+<div>
+<!--    <p class="paragraph"></p>-->
+    <p class="horizontal-container">Email: {{ .Email }}</p>
+    <p class="horizontal-container">2FA: {{ if .MFA }}{{.MFA}}<button class="btn small" hx-post="/disable-mfa" hx-confirm="Are you sure?">Disable</button>{{ else }}disabled<button class="btn small" hx-post="/enable-mfa" hx-target=".content">Enable</button>{{ end }}</p>
+    <button class="btn" hx-post="/logout" hx-confirm="Are you sure?">Logout</button>
+    {{ if .RedirectURL }}<div hx-trigger="load" hx-get="/redirect" hx-confirm="Your token will be sent to {{ .RedirectURL }}"></div>{{ end }}
+</div>
+{{ end }}
+
+{{ define "mfa" }}
+<p class="action">TOTP</p>
+<div id="qrcode"></div>
+{{ if .Secret }}<p class="shared-secret">{{ .Secret }}</p>{{ end }}
+<form hx-post="/confirm-mfa" hx-trigger="submit" hx-target=".content">
+    <input name="code" placeholder="6-digit code" maxlength="6">
+    <input type="submit" value="Confirm" class="btn">
+</form>
+<script type="text/javascript">
+    const qr = qrcode(0, 'M');
+    qr.addData('{{ .URL }}');
+    qr.make();
+    document.getElementById('qrcode').innerHTML = qr.createSvgTag(5, 0);
+</script>
+{{ end }}
+
+{{ define "login-mfa" }}
+<p class="action">TOTP</p>
+<form hx-post="/login-mfa" hx-trigger="submit" hx-target=".content">
+    <input type="hidden" name="mfa-token" value="{{.}}">
+    <input name="code" placeholder="6-digit code" maxlength="6">
+    <input type="submit" value="Submit" class="btn">
+</form>
+{{ end }}
